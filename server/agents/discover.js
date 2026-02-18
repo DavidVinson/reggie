@@ -116,4 +116,28 @@ async function discoverSite(site) {
   }
 }
 
-module.exports = { discoverSite };
+const PORTAL_SIGNALS = [
+  'activenet', 'perfectmind', 'recdesk', 'civicrec', 'myrec',
+  'recreationlink', 'vermont systems', 'daxko', 'rec1',
+];
+
+async function detectSiteType(url, markdown) {
+  const haystack = (url + ' ' + (markdown || '')).toLowerCase();
+  if (PORTAL_SIGNALS.some(signal => haystack.includes(signal))) return 'portal';
+
+  // Thin content — do a fallback scrape
+  if ((markdown || '').length < 300) {
+    try {
+      const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+      const result = await firecrawl.scrapeUrl(url, { formats: ['markdown'] });
+      const content = (result.markdown || '').toLowerCase();
+      if (PORTAL_SIGNALS.some(signal => content.includes(signal))) return 'portal';
+    } catch {
+      // ignore fallback errors
+    }
+  }
+
+  return 'direct';
+}
+
+module.exports = { discoverSite, detectSiteType };

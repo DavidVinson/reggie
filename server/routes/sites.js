@@ -1,4 +1,5 @@
 const { Router } = require('express');
+const { FirecrawlAppV1: FirecrawlApp } = require('@mendable/firecrawl-js');
 const db = require('../db');
 
 const router = Router();
@@ -6,6 +7,45 @@ const router = Router();
 router.get('/', (req, res) => {
   const sites = db.prepare('SELECT * FROM sites ORDER BY created_at DESC').all();
   res.json(sites);
+});
+
+router.post('/search', async (req, res) => {
+  const { city, state } = req.body;
+  if (!city || !state || typeof city !== 'string' || typeof state !== 'string') {
+    return res.status(400).json({ error: 'city and state are required strings' });
+  }
+
+  try {
+    const { detectSiteType } = require('../agents/discover');
+    const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+
+    const query = `parks recreation activity programs ${city.trim()} ${state.trim()}`;
+    const searchRes = await firecrawl.search(query, { limit: 10 });
+    const rawResults = searchRes.data || searchRes.results || searchRes || [];
+
+    // Cap fallback scrapes at 5 (detectSiteType may scrape thin results)
+    let fallbackCount = 0;
+    const results = await Promise.all(
+      rawResults.map(async (r) => {
+        const url = r.url || r.link || '';
+        const markdown = r.markdown || r.description || '';
+        const canFallback = markdown.length < 300 && fallbackCount < 5;
+        if (canFallback) fallbackCount++;
+        const type = await detectSiteType(url, markdown);
+        return {
+          name: r.title || r.name || url,
+          url,
+          description: r.description || r.snippet || '',
+          type,
+        };
+      })
+    );
+
+    res.json({ results: results.filter(r => r.url) });
+  } catch (err) {
+    console.error('Site search error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/:id', (req, res) => {

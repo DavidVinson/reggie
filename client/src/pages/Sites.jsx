@@ -266,6 +266,8 @@ export default function Sites() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {searchResults.map(r => {
                   const alreadyAdded = sites.some(s => s.url === r.url);
+                  // Strip leading pipe/dash artifacts from scraped page titles
+                  const displayName = r.name.replace(/^[\|\-–—·\s]+/, '').trim() || r.url;
                   return (
                     <label
                       key={r.url}
@@ -273,6 +275,7 @@ export default function Sites() {
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: 10,
+                        overflow: 'hidden',
                         cursor: alreadyAdded ? 'default' : 'pointer',
                         opacity: alreadyAdded ? 0.5 : 1,
                       }}
@@ -286,7 +289,7 @@ export default function Sites() {
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <strong style={{ fontSize: 14 }}>{r.name}</strong>
+                          <strong style={{ fontSize: 14 }}>{displayName}</strong>
                           <span
                             className="badge"
                             style={r.type === 'portal' ? { background: '#fef3c7', color: '#92400e' } : {}}
@@ -299,7 +302,15 @@ export default function Sites() {
                         </div>
                         <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.url}</p>
                         {r.description && (
-                          <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{r.description}</p>
+                          <p style={{
+                            fontSize: 12,
+                            color: 'var(--color-text-muted)',
+                            marginTop: 2,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}>{r.description}</p>
                         )}
                         {r.type === 'portal' && (
                           <p style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>

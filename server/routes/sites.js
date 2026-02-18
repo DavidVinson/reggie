@@ -9,6 +9,27 @@ router.get('/', (req, res) => {
   res.json(sites);
 });
 
+const NOISE_DOMAINS = [
+  // Social media
+  'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+  'youtube.com', 'linkedin.com', 'tiktok.com', 'pinterest.com',
+  // Publishing / doc platforms
+  'issuu.com', 'scribd.com', 'slideshare.net',
+  // Review / discovery
+  'yelp.com', 'tripadvisor.com', 'eventbrite.com', 'meetup.com',
+  // News / blogs
+  'patch.com', 'nextdoor.com',
+];
+
+function isNoiseDomain(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '');
+    return NOISE_DOMAINS.some(d => host === d || host.endsWith('.' + d));
+  } catch {
+    return false;
+  }
+}
+
 router.post('/search', async (req, res) => {
   const { city, state } = req.body;
   if (!city || !state || typeof city !== 'string' || typeof state !== 'string') {
@@ -41,7 +62,22 @@ router.post('/search', async (req, res) => {
       })
     );
 
-    res.json({ results: results.filter(r => r.url) });
+    // Deduplicate by hostname — keep the shortest path (root) per domain, skip noise
+    const byHost = new Map();
+    for (const r of results) {
+      if (!r.url || isNoiseDomain(r.url)) continue;
+      try {
+        const host = new URL(r.url).hostname.replace(/^www\./, '');
+        const existing = byHost.get(host);
+        if (!existing || r.url.length < existing.url.length) {
+          byHost.set(host, r);
+        }
+      } catch {
+        // unparseable URL — skip
+      }
+    }
+
+    res.json({ results: Array.from(byHost.values()) });
   } catch (err) {
     console.error('Site search error:', err);
     res.status(500).json({ error: err.message });

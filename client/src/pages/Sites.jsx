@@ -15,6 +15,8 @@ export default function Sites() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', url: '', type: 'direct', scrape_interval: 60 });
   const [loading, setLoading] = useState(true);
+  const [discovering, setDiscovering] = useState({});
+  const [discoverResult, setDiscoverResult] = useState({});
 
   async function fetchSites() {
     try {
@@ -48,6 +50,22 @@ export default function Sites() {
     setForm({ name: '', url: '', type: 'direct', scrape_interval: 60 });
     setShowForm(false);
     fetchSites();
+  }
+
+  async function handleDiscover(site) {
+    setDiscovering(d => ({ ...d, [site.id]: true }));
+    setDiscoverResult(r => ({ ...r, [site.id]: null }));
+    try {
+      const res = await fetch(`${API}/${site.id}/discover`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Discovery failed');
+      setDiscoverResult(r => ({ ...r, [site.id]: { ok: true, programs: data.programs, parseSkipped: data.parse_skipped } }));
+      fetchSites();
+    } catch (err) {
+      setDiscoverResult(r => ({ ...r, [site.id]: { ok: false, error: err.message } }));
+    } finally {
+      setDiscovering(d => ({ ...d, [site.id]: false }));
+    }
   }
 
   async function handleDelete(id) {
@@ -136,10 +154,29 @@ export default function Sites() {
               <p style={{ fontSize: 13, marginTop: 4, color: programCounts[site.id] ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
                 {programCounts[site.id] ? `${programCounts[site.id]} program${programCounts[site.id] === 1 ? '' : 's'}` : 'No programs discovered'}
               </p>
+              {discoverResult[site.id] && (
+                <p style={{ fontSize: 12, marginTop: 4, color: discoverResult[site.id].ok ? 'var(--color-primary)' : '#dc2626' }}>
+                  {discoverResult[site.id].ok
+                    ? discoverResult[site.id].parseSkipped
+                      ? `Scraped ${discoverResult[site.id].programs === 0 ? 'pages' : discoverResult[site.id].programs + ' program(s)'} — parse pending (no API credits)`
+                      : `Found ${discoverResult[site.id].programs} program(s)`
+                    : discoverResult[site.id].error}
+                </p>
+              )}
             </div>
-            <button className="btn-danger" style={{ padding: '8px 12px', fontSize: 14 }} onClick={() => handleDelete(site.id)}>
-              Delete
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                className="btn-secondary"
+                style={{ padding: '8px 12px', fontSize: 14 }}
+                disabled={discovering[site.id] || site.type === 'portal'}
+                onClick={() => handleDiscover(site)}
+              >
+                {discovering[site.id] ? 'Discovering…' : 'Discover'}
+              </button>
+              <button className="btn-danger" style={{ padding: '8px 12px', fontSize: 14 }} onClick={() => handleDelete(site.id)}>
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>

@@ -58,6 +58,54 @@ router.patch('/:id', (req, res) => {
   res.json(updated);
 });
 
+router.post('/:id/discover', async (req, res) => {
+  const site = db.prepare('SELECT * FROM sites WHERE id = ?').get(req.params.id);
+  if (!site) return res.status(404).json({ error: 'Site not found' });
+  if (site.type === 'portal') {
+    return res.status(400).json({ error: 'Portal sites are not supported yet.' });
+  }
+
+  try {
+    const { discoverSite } = require('../agents/discover');
+    const { rawScrapes, programs, parseSkipped } = await discoverSite(site);
+
+    // Store raw scrapes
+    const insertRaw = db.prepare('INSERT INTO raw_scrapes (site_id, url, content) VALUES (?, ?, ?)');
+    for (const s of rawScrapes) {
+      insertRaw.run(site.id, s.url, s.content || null);
+    }
+
+    // Bulk insert programs
+    const insert = db.prepare(`
+      INSERT INTO programs (site_id, name, type, age_group, start_date, end_date, day_of_week, start_time, end_time, location, cost, registration_status, spots_available, source_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const bulkInsert = db.transaction((progs) => {
+      db.prepare('DELETE FROM programs WHERE site_id = ?').run(site.id);
+      for (const p of progs) {
+        insert.run(
+          site.id, p.name, p.type || null, p.ageGroup || null,
+          p.dates?.start || null, p.dates?.end || null,
+          p.times?.day || null, p.times?.start || null, p.times?.end || null,
+          p.location || null,
+          p.cost != null ? String(p.cost) : null,
+          p.registrationStatus || null,
+          p.spotsAvailable ?? null,
+          p.sourceUrl || null
+        );
+      }
+    });
+
+    bulkInsert(programs);
+
+    res.json({ programs: programs.length, raw_scrapes: rawScrapes.length, parse_skipped: parseSkipped || false });
+  } catch (err) {
+    console.error('Discovery error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/:id', (req, res) => {
   const result = db.prepare('DELETE FROM sites WHERE id = ?').run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Site not found' });

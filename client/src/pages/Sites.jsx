@@ -297,7 +297,7 @@ export default function Sites() {
                             <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>already added</span>
                           )}
                         </div>
-                        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, wordBreak: 'break-all' }}>{r.url}</p>
+                        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.url}</p>
                         {r.description && (
                           <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{r.description}</p>
                         )}

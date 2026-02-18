@@ -11,6 +11,7 @@ const INTERVALS = [
 
 export default function Sites() {
   const [sites, setSites] = useState([]);
+  const [programCounts, setProgramCounts] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', url: '', type: 'direct', scrape_interval: 60 });
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,14 @@ export default function Sites() {
       const res = await fetch(API);
       const data = await res.json();
       setSites(data);
+      // Fetch program counts
+      const progRes = await fetch('/api/programs');
+      const programs = await progRes.json();
+      const counts = {};
+      for (const p of programs) {
+        counts[p.site_id] = (counts[p.site_id] || 0) + 1;
+      }
+      setProgramCounts(counts);
     } catch {
       setSites([]);
     } finally {
@@ -123,6 +132,9 @@ export default function Sites() {
               <p style={{ color: 'var(--color-text-muted)', fontSize: 14, marginTop: 4 }}>{site.url}</p>
               <p style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 2 }}>
                 {INTERVALS.find(i => i.value === site.scrape_interval)?.label || `Every ${site.scrape_interval} min`}
+              </p>
+              <p style={{ fontSize: 13, marginTop: 4, color: programCounts[site.id] ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+                {programCounts[site.id] ? `${programCounts[site.id]} program${programCounts[site.id] === 1 ? '' : 's'}` : 'No programs discovered'}
               </p>
             </div>
             <button className="btn-danger" style={{ padding: '8px 12px', fontSize: 14 }} onClick={() => handleDelete(site.id)}>

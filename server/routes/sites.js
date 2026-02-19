@@ -44,15 +44,10 @@ router.post('/search', async (req, res) => {
     const searchRes = await firecrawl.search(query, { limit: 10 });
     const rawResults = searchRes.data || searchRes.results || searchRes || [];
 
-    // Cap fallback scrapes at 5 (detectSiteType may scrape thin results)
-    let fallbackCount = 0;
     const results = await Promise.all(
       rawResults.map(async (r) => {
         const url = r.url || r.link || '';
-        const markdown = r.markdown || r.description || '';
-        const canFallback = markdown.length < 300 && fallbackCount < 5;
-        if (canFallback) fallbackCount++;
-        const type = await detectSiteType(url, markdown);
+        const type = await detectSiteType(url);
         return {
           name: r.title || r.name || url,
           url,

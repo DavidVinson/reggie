@@ -121,22 +121,11 @@ const PORTAL_SIGNALS = [
   'recreationlink', 'vermont systems', 'daxko', 'rec1',
 ];
 
-async function detectSiteType(url, markdown) {
-  const haystack = (url + ' ' + (markdown || '')).toLowerCase();
-  if (PORTAL_SIGNALS.some(signal => haystack.includes(signal))) return 'portal';
-
-  // Thin content — do a fallback scrape
-  if ((markdown || '').length < 300) {
-    try {
-      const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
-      const result = await firecrawl.scrapeUrl(url, { formats: ['markdown'] });
-      const content = (result.markdown || '').toLowerCase();
-      if (PORTAL_SIGNALS.some(signal => content.includes(signal))) return 'portal';
-    } catch {
-      // ignore fallback errors
-    }
-  }
-
+async function detectSiteType(url) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    if (PORTAL_SIGNALS.some(signal => hostname.includes(signal))) return 'portal';
+  } catch {}
   return 'direct';
 }
 

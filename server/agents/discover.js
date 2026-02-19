@@ -85,13 +85,14 @@ async function discoverSite(site) {
   const combinedContent = rawScrapes
     .filter(s => s.content)
     .map(s => `\n\n--- Page: ${s.url} ---\n${s.content}`)
-    .join('\n');
+    .join('\n')
+    .slice(0, 50000);
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 8192,
-      system: PARSER_PROMPT,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      system: [{ type: 'text', text: PARSER_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{
         role: 'user',
         content: `Parse programs from this scraped content from ${site.url}. Return only valid JSON matching the parse-programs output format.\n\n${combinedContent}`,

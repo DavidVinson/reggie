@@ -6,6 +6,7 @@ const navItems = [
   { to: '/sites', label: 'Sites', icon: '◎' },
   { to: '/programs', label: 'Programs', icon: '▤' },
   { to: '/watch-rules', label: 'Watches', icon: '⚡' },
+  { to: '/notifications', label: 'Alerts', icon: '🔔' },
 ];
 
 export default function Layout() {

@@ -4,7 +4,8 @@ const AGE_GROUPS = ['youth', 'adult', 'senior', 'all ages'];
 
 function timeAgo(dateStr) {
   if (!dateStr) return 'Never';
-  const diff = Date.now() - new Date(dateStr + 'Z').getTime();
+  const iso = dateStr.includes('T') ? dateStr + 'Z' : dateStr.replace(' ', 'T') + 'Z';
+  const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60000);
   if (min < 1) return 'Just now';
   if (min < 60) return `${min}m ago`;

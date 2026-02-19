@@ -17,6 +17,9 @@ app.use('/api/programs', require('./routes/programs'));
 app.use('/api/watch-rules', require('./routes/watchRules'));
 app.use('/api/notifications', require('./routes/notifications'));
 
+const { startScheduler } = require('./scheduler');
+
 app.listen(PORT, () => {
   console.log(`Reggie server running on port ${PORT}`);
+  startScheduler();
 });

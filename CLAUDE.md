@@ -106,6 +106,7 @@ Watch + Notify:  Main → Scraper (check program) → Main → Parser (parse ava
 | Scraper | `agents/scraper.md` | `discover-site`, `scrape-programs`, `watch-program` | Active |
 | Parser | `agents/parser.md` | `parse-programs`, `parse-availability`, `detect-structure` | Active |
 | Notifier | `agents/notifier.md` | `send-sms`, `send-in-app`, `send-alert` | Active |
+| Reviewer | `agents/reviewer.md` | `review-diff` | Active |
 | Authenticator | `agents/authenticator.md` | TBD — login, session management, portal navigation | Future |
 | Registrar | `agents/registrar.md` | TBD — form submission, registration confirmation | Future |
 

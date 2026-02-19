@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Reggie pre-commit reviewer
+# Spawns the Reviewer sub-agent via Claude Code to review staged changes.
+# - Critical issues: block the commit
+# - High issues: warn but allow
+# - Low issues: auto-fix and re-stage silently
+
+# Skip if nothing is staged
+DIFF=$(git diff --staged)
+[ -z "$DIFF" ] && exit 0
+
+# Locate the claude CLI
+CLAUDE=$(command -v claude 2>/dev/null || true)
+if [ -z "$CLAUDE" ]; then
+  echo "Reggie: claude CLI not found in PATH — skipping review"
+  exit 0
+fi
+
+# Write diff to a temp file so Claude can read it cleanly
+DIFF_FILE=$(mktemp /tmp/reggie-diff-XXXXXX.patch)
+LOG_FILE=$(mktemp /tmp/reggie-review-XXXXXX.log)
+trap 'rm -f "$DIFF_FILE" "$LOG_FILE"' EXIT
+
+printf '%s' "$DIFF" > "$DIFF_FILE"
+
+echo "Reggie: reviewing staged changes..."
+
+# Unset CLAUDECODE so claude can run even when invoked from inside a Claude Code session
+unset CLAUDECODE
+
+# Run the reviewer via Claude Code (non-interactive).
+# Capture stdout to LOG_FILE so we can parse the result line.
+# Claude should print a line starting with REGGIE_REVIEW: containing the JSON result.
+"$CLAUDE" -p "You are the Reggie main agent running an automated pre-commit review. Do not be conversational. Follow these steps exactly and in order.
+
+1. Read the file agents/reviewer.md to understand the Reviewer sub-agent.
+2. Read the diff from: $DIFF_FILE
+3. Use the Task tool to spawn the Reviewer sub-agent with skill \`review-diff\`, passing the full diff content.
+4. Receive the reviewer JSON output.
+5. For each item in the autoFixes array: apply the fix using the Edit tool.
+6. After applying fixes, re-stage each fixed file using the Bash tool: git add <file>
+7. As your final output, print EXACTLY one line in this format (no other text after it):
+REGGIE_REVIEW:{\"block\":<true|false>,\"criticalCount\":<n>,\"highCount\":<n>,\"lowFixed\":<n>,\"issues\":[<high and critical issue objects only>]}" > "$LOG_FILE" 2>&1 || true
+
+
+# Extract the result line from claude's output
+RESULT_LINE=$(grep "^REGGIE_REVIEW:" "$LOG_FILE" | tail -1 || true)
+JSON=${RESULT_LINE#REGGIE_REVIEW:}
+
+if [ -z "$JSON" ]; then
+  echo "Reggie: reviewer returned no result — allowing commit"
+  exit 0
+fi
+
+# Write JSON to a temp file for safe python3 parsing (avoids shell quoting issues)
+JSON_FILE=$(mktemp /tmp/reggie-json-XXXXXX.json)
+trap 'rm -f "$DIFF_FILE" "$LOG_FILE" "$JSON_FILE"' EXIT
+printf '%s' "$JSON" > "$JSON_FILE"
+
+parse() {
+  python3 - "$JSON_FILE" "$1" <<'PYEOF'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    val = d.get(sys.argv[2], False if sys.argv[2] == 'block' else 0)
+    print(val)
+except Exception:
+    print(0)
+PYEOF
+}
+
+print_issues() {
+  local severity=$1
+  python3 - "$JSON_FILE" "$severity" <<'PYEOF'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    for issue in d.get('issues', []):
+        if issue.get('severity') == sys.argv[2]:
+            f = issue.get('file', '?')
+            l = issue.get('line', '?')
+            m = issue.get('message', '')
+            print(f"  [{sys.argv[2].upper()}] {f}:{l} — {m}")
+except Exception:
+    pass
+PYEOF
+}
+
+BLOCK=$(parse block)
+CRITICAL=$(parse criticalCount)
+HIGH=$(parse highCount)
+FIXED=$(parse lowFixed)
+
+[ "$FIXED" -gt "0" ] 2>/dev/null && echo "Reggie: $FIXED low-severity issue(s) auto-fixed and re-staged"
+
+if [ "$BLOCK" = "True" ]; then
+  echo "Reggie: commit blocked — $CRITICAL critical issue(s) must be fixed"
+  print_issues critical
+  exit 1
+fi
+
+if [ "$HIGH" -gt "0" ] 2>/dev/null; then
+  echo "Reggie: $HIGH high-severity issue(s) found — review recommended"
+  print_issues high
+fi
+
+exit 0

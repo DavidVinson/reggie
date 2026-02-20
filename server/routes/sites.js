@@ -85,18 +85,21 @@ router.get('/:id', (req, res) => {
   res.json(site);
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { name, url, type, scrape_interval, portal_url } = req.body;
-  if (!name || !url || !type) {
-    return res.status(400).json({ error: 'name, url, and type are required' });
+  if (!name || !url) {
+    return res.status(400).json({ error: 'name and url are required' });
   }
-  if (!['direct', 'portal'].includes(type)) {
-    return res.status(400).json({ error: 'type must be direct or portal' });
+
+  let resolvedType = type;
+  if (!resolvedType || !['direct', 'portal'].includes(resolvedType)) {
+    const { detectSiteType } = require('../agents/discover');
+    resolvedType = await detectSiteType(url);
   }
 
   const result = db.prepare(
     'INSERT INTO sites (name, url, type, scrape_interval, portal_url) VALUES (?, ?, ?, ?, ?)'
-  ).run(name, url, type, scrape_interval || 3600, portal_url || null);
+  ).run(name, url, resolvedType, scrape_interval || 3600, portal_url || null);
 
   const site = db.prepare('SELECT * FROM sites WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(site);

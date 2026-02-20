@@ -13,13 +13,12 @@ export default function Sites() {
   const [sites, setSites] = useState([]);
   const [programCounts, setProgramCounts] = useState({});
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', url: '', type: 'direct', scrape_interval: 60 });
+  const [form, setForm] = useState({ name: '', url: '', scrape_interval: 60 });
   const [loading, setLoading] = useState(true);
   const [discovering, setDiscovering] = useState({});
   const [discoverResult, setDiscoverResult] = useState({});
 
   // Find Sites state
-  const [showFindSites, setShowFindSites] = useState(false);
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [searching, setSearching] = useState(false);
@@ -56,7 +55,7 @@ export default function Sites() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
-    setForm({ name: '', url: '', type: 'direct', scrape_interval: 60 });
+    setForm({ name: '', url: '', scrape_interval: 60 });
     setShowForm(false);
     fetchSites();
   }
@@ -81,19 +80,6 @@ export default function Sites() {
     if (!window.confirm('Delete this site?')) return;
     await fetch(`${API}/${id}`, { method: 'DELETE' });
     fetchSites();
-  }
-
-  function toggleAddSite() {
-    setShowForm(f => !f);
-    setShowFindSites(false);
-  }
-
-  function toggleFindSites() {
-    setShowFindSites(f => !f);
-    setShowForm(false);
-    setSearchResults(null);
-    setSearchError('');
-    setSelectedUrls(new Set());
   }
 
   async function handleSearch(e) {
@@ -145,7 +131,6 @@ export default function Sites() {
           })
         )
       );
-      setShowFindSites(false);
       setSearchResults(null);
       setSelectedUrls(new Set());
       setCity('');
@@ -163,17 +148,128 @@ export default function Sites() {
         Manage activity program websites
       </p>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        <button onClick={toggleAddSite}>
-          {showForm ? 'Cancel' : 'Add Site'}
-        </button>
-        <button className="btn-secondary" onClick={toggleFindSites}>
-          {showFindSites ? 'Cancel' : 'Find Sites'}
+      <div className="card" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div className="form-group" style={{ flex: 2 }}>
+              <label>City</label>
+              <input
+                required
+                placeholder="e.g. Fargo"
+                value={city}
+                onChange={e => setCity(e.target.value)}
+              />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>State</label>
+              <input
+                required
+                placeholder="ND"
+                maxLength={2}
+                value={state}
+                onChange={e => setState(e.target.value)}
+              />
+            </div>
+          </div>
+          <button type="submit" disabled={searching}>
+            {searching ? 'Searching…' : 'Search'}
+          </button>
+        </form>
+
+        {searchError && (
+          <p style={{ color: '#dc2626', fontSize: 14 }}>{searchError}</p>
+        )}
+
+        {searchResults !== null && searchResults.length === 0 && (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>
+            No sites found for {city}, {state}. Try a different city.
+          </p>
+        )}
+
+        {searchResults && searchResults.length > 0 && (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {searchResults.map(r => {
+                const alreadyAdded = sites.some(s => s.url === r.url);
+                // Strip leading pipe/dash artifacts from scraped page titles
+                const displayName = r.name.replace(/^[\|\-–—·\s]+/, '').trim() || r.url;
+                return (
+                  <label
+                    key={r.url}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                      overflow: 'hidden',
+                      cursor: alreadyAdded ? 'default' : 'pointer',
+                      opacity: alreadyAdded ? 0.5 : 1,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ marginTop: 3, flexShrink: 0 }}
+                      checked={selectedUrls.has(r.url)}
+                      disabled={alreadyAdded}
+                      onChange={() => toggleUrl(r.url)}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: 14 }}>{displayName}</strong>
+                        <span
+                          className="badge"
+                          style={r.type === 'portal' ? { background: '#fef3c7', color: '#92400e' } : {}}
+                        >
+                          {r.type}
+                        </span>
+                        {alreadyAdded && (
+                          <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>already added</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.url}</p>
+                      {r.description && (
+                        <p style={{
+                          fontSize: 12,
+                          color: 'var(--color-text-muted)',
+                          marginTop: 2,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}>{r.description}</p>
+                      )}
+                      {r.type === 'portal' && (
+                        <p style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>
+                          Portal site — scraping not supported yet
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <button
+              disabled={selectedUrls.size === 0 || adding}
+              onClick={handleAddSelected}
+            >
+              {adding ? 'Adding…' : `Add Selected (${selectedUrls.size})`}
+            </button>
+          </>
+        )}
+      </div>
+
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>or add one site manually</span>
+        <button
+          className="btn-secondary"
+          style={{ fontSize: 13, padding: '6px 14px', flexShrink: 0 }}
+          onClick={() => setShowForm(f => !f)}
+        >
+          {showForm ? 'Cancel' : '+ Site'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="card" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={handleSubmit} className="card" style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="form-group">
             <label>Name</label>
             <input
@@ -193,18 +289,6 @@ export default function Sites() {
             />
           </div>
           <div className="form-group">
-            <label>Type</label>
-            <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-              <option value="direct">Direct</option>
-              <option value="portal">Portal</option>
-            </select>
-          </div>
-          {form.type === 'portal' && (
-            <p style={{ color: '#d97706', fontSize: 14, padding: '8px 12px', background: '#fef3c7', borderRadius: 8 }}>
-              Portal sites are not supported yet. You can save it, but scraping won't work until portal support is added.
-            </p>
-          )}
-          <div className="form-group">
             <label>Scrape Interval</label>
             <select
               value={form.scrape_interval}
@@ -222,121 +306,10 @@ export default function Sites() {
         </form>
       )}
 
-      {showFindSites && (
-        <div className="card" style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div className="form-group" style={{ flex: 2 }}>
-                <label>City</label>
-                <input
-                  required
-                  placeholder="e.g. Fargo"
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                />
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label>State</label>
-                <input
-                  required
-                  placeholder="ND"
-                  maxLength={2}
-                  value={state}
-                  onChange={e => setState(e.target.value)}
-                />
-              </div>
-            </div>
-            <button type="submit" disabled={searching}>
-              {searching ? 'Searching…' : 'Search'}
-            </button>
-          </form>
-
-          {searchError && (
-            <p style={{ color: '#dc2626', fontSize: 14 }}>{searchError}</p>
-          )}
-
-          {searchResults !== null && searchResults.length === 0 && (
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>
-              No sites found for {city}, {state}. Try a different city.
-            </p>
-          )}
-
-          {searchResults && searchResults.length > 0 && (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {searchResults.map(r => {
-                  const alreadyAdded = sites.some(s => s.url === r.url);
-                  // Strip leading pipe/dash artifacts from scraped page titles
-                  const displayName = r.name.replace(/^[\|\-–—·\s]+/, '').trim() || r.url;
-                  return (
-                    <label
-                      key={r.url}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 10,
-                        overflow: 'hidden',
-                        cursor: alreadyAdded ? 'default' : 'pointer',
-                        opacity: alreadyAdded ? 0.5 : 1,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        style={{ marginTop: 3, flexShrink: 0 }}
-                        checked={selectedUrls.has(r.url)}
-                        disabled={alreadyAdded}
-                        onChange={() => toggleUrl(r.url)}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <strong style={{ fontSize: 14 }}>{displayName}</strong>
-                          <span
-                            className="badge"
-                            style={r.type === 'portal' ? { background: '#fef3c7', color: '#92400e' } : {}}
-                          >
-                            {r.type}
-                          </span>
-                          {alreadyAdded && (
-                            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>already added</span>
-                          )}
-                        </div>
-                        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.url}</p>
-                        {r.description && (
-                          <p style={{
-                            fontSize: 12,
-                            color: 'var(--color-text-muted)',
-                            marginTop: 2,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                          }}>{r.description}</p>
-                        )}
-                        {r.type === 'portal' && (
-                          <p style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>
-                            Portal site — scraping not supported yet
-                          </p>
-                        )}
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              <button
-                disabled={selectedUrls.size === 0 || adding}
-                onClick={handleAddSelected}
-              >
-                {adding ? 'Adding…' : `Add Selected (${selectedUrls.size})`}
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {loading && <p style={{ color: 'var(--color-text-muted)' }}>Loading...</p>}
-        {!loading && sites.length === 0 && !showForm && !showFindSites && (
-          <p style={{ color: 'var(--color-text-muted)' }}>No sites configured yet. Add one to get started.</p>
+        {!loading && sites.length === 0 && (
+          <p style={{ color: 'var(--color-text-muted)' }}>No sites configured yet. Search for one above to get started.</p>
         )}
         {sites.map(site => (
           <div key={site.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -346,6 +319,11 @@ export default function Sites() {
                 <span className="badge">{site.type}</span>
               </div>
               <p style={{ color: 'var(--color-text-muted)', fontSize: 14, marginTop: 4 }}>{site.url}</p>
+              {site.type === 'portal' && (
+                <p style={{ fontSize: 12, color: '#d97706', marginTop: 4 }}>
+                  Uses a registration portal — scraping not supported yet
+                </p>
+              )}
               <p style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 2 }}>
                 {INTERVALS.find(i => i.value === site.scrape_interval)?.label || `Every ${site.scrape_interval} min`}
               </p>

@@ -103,6 +103,7 @@ Watch + Notify:  Main → Scraper (check program) → Main → Parser (parse ava
 
 | Agent | File | Skills | Status |
 |---|---|---|---|
+| App Manager | `agents/app-manager.md` | `start`, `stop`, `status`, `restart` | Active |
 | Scraper | `agents/scraper.md` | `discover-site`, `scrape-programs`, `watch-program` | Active |
 | Parser | `agents/parser.md` | `parse-programs`, `parse-availability`, `detect-structure` | Active |
 | Notifier | `agents/notifier.md` | `send-sms`, `send-in-app`, `send-alert` | Active |

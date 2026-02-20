@@ -90,7 +90,7 @@ async function discoverSite(site) {
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4-5',
       max_tokens: 4096,
       system: [{ type: 'text', text: PARSER_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{

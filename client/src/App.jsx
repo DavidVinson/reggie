@@ -5,6 +5,7 @@ import Sites from './pages/Sites';
 import Programs from './pages/Programs';
 import WatchRules from './pages/WatchRules';
 import Notifications from './pages/Notifications';
+import Chat from './pages/Chat';
 import Login from './pages/Login';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/programs" element={<Programs />} />
         <Route path="/watch-rules" element={<WatchRules />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/chat" element={<Chat />} />
       </Route>
     </Routes>
   );

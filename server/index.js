@@ -7,6 +7,7 @@ const auth = require('./middleware/auth');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.use(require('morgan')('dev'));
 app.use(cors());
 app.use(express.json());
 app.use(auth);
@@ -16,6 +17,7 @@ app.use('/api/sites', require('./routes/sites'));
 app.use('/api/programs', require('./routes/programs'));
 app.use('/api/watch-rules', require('./routes/watchRules'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/chat', require('./routes/chat'));
 
 const { startScheduler } = require('./scheduler');
 

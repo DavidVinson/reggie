@@ -15,5 +15,6 @@ db.exec(schema);
 
 // Migrations for existing databases
 try { db.prepare('ALTER TABLE watch_rules ADD COLUMN last_checked_at TEXT').run(); } catch {}
+try { db.prepare('ALTER TABLE programs ADD COLUMN registration_deadline TEXT').run(); } catch {}
 
 module.exports = db;

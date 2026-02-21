@@ -1,4 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
+import Markdown from 'react-markdown';
+
+const mdComponents = {
+  p:      ({ children }) => <p style={{ margin: '0 0 8px' }}>{children}</p>,
+  strong: ({ children }) => <strong style={{ fontWeight: 600, color: 'var(--color-text)' }}>{children}</strong>,
+  ol:     ({ children }) => <ol style={{ paddingLeft: 20, margin: '4px 0 8px' }}>{children}</ol>,
+  ul:     ({ children }) => <ul style={{ paddingLeft: 20, margin: '4px 0 8px' }}>{children}</ul>,
+  li:     ({ children }) => <li style={{ marginBottom: 6, lineHeight: 1.5 }}>{children}</li>,
+};
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -80,10 +89,11 @@ export default function Chat() {
               border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
               fontSize: 15,
               lineHeight: 1.5,
-              whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
             }}>
-              {msg.content}
+              {msg.role === 'assistant'
+                ? <Markdown components={mdComponents}>{msg.content}</Markdown>
+                : msg.content}
             </div>
           </div>
         ))}

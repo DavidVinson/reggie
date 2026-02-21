@@ -42,6 +42,7 @@ Analyze a new site's layout to determine how programs are organized.
 - **Cost**: normalize to integer cents (e.g., $50.00 → 5000)
 - **Age group**: normalize to standard labels ("youth", "adult", "senior", "all ages")
 - **Registration status**: normalize to enum ("open", "closed", "waitlist", "upcoming", "unknown")
+- **Registration deadline**: normalize to ISO 8601 (`YYYY-MM-DD`), or `null` if not listed
 - **Spots available**: integer, or `null` if not listed
 
 ### Error Handling
@@ -77,6 +78,7 @@ Analyze a new site's layout to determine how programs are organized.
       "location": "Fargo Parks Sports Center",
       "cost": null,
       "registrationStatus": "unknown",
+      "registrationDeadline": null,
       "spotsAvailable": null,
       "sourceUrl": "https://fargoparks.com/node/641"
     }

@@ -151,8 +151,8 @@ router.post('/:id/discover', async (req, res) => {
 
     // Bulk insert programs
     const insert = db.prepare(`
-      INSERT INTO programs (site_id, name, type, age_group, start_date, end_date, day_of_week, start_time, end_time, location, cost, registration_status, spots_available, source_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO programs (site_id, name, type, age_group, start_date, end_date, day_of_week, start_time, end_time, location, cost, registration_status, registration_deadline, spots_available, source_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const bulkInsert = db.transaction((progs) => {
@@ -165,6 +165,7 @@ router.post('/:id/discover', async (req, res) => {
           p.location || null,
           p.cost != null ? String(p.cost) : null,
           p.registrationStatus || null,
+          p.registrationDeadline || null,
           p.spotsAvailable ?? null,
           p.sourceUrl || null
         );
@@ -223,8 +224,8 @@ router.post('/:id/programs', (req, res) => {
   }
 
   const insert = db.prepare(`
-    INSERT INTO programs (site_id, name, type, age_group, start_date, end_date, day_of_week, start_time, end_time, location, cost, registration_status, spots_available, source_url, raw_content)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO programs (site_id, name, type, age_group, start_date, end_date, day_of_week, start_time, end_time, location, cost, registration_status, registration_deadline, spots_available, source_url, raw_content)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const bulkInsert = db.transaction((programs) => {
@@ -234,8 +235,8 @@ router.post('/:id/programs', (req, res) => {
         req.params.id, p.name, p.type || null, p.age_group || null,
         p.start_date || null, p.end_date || null, p.day_of_week || null,
         p.start_time || null, p.end_time || null, p.location || null,
-        p.cost || null, p.registration_status || null, p.spots_available || null,
-        p.source_url || null, p.raw_content || null
+        p.cost || null, p.registration_status || null, p.registration_deadline || null,
+        p.spots_available || null, p.source_url || null, p.raw_content || null
       );
     }
   });

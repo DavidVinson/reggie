@@ -18,21 +18,25 @@ export default function WatchRules() {
   const [rules, setRules] = useState([]);
   const [sites, setSites] = useState([]);
   const [programs, setPrograms] = useState([]);
+  const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ site_id: '', program_id: '', activity_type: '', age_group: '' });
   const [checking, setChecking] = useState({});
+  const [checkResults, setCheckResults] = useState({});
 
   async function fetchAll() {
     try {
-      const [rulesRes, sitesRes, programsRes] = await Promise.all([
+      const [rulesRes, sitesRes, programsRes, typesRes] = await Promise.all([
         fetch('/api/watch-rules'),
         fetch('/api/sites'),
         fetch('/api/programs'),
+        fetch('/api/programs/types'),
       ]);
       setRules(await rulesRes.json());
       setSites(await sitesRes.json());
       setPrograms(await programsRes.json());
+      setTypes(await typesRes.json());
     } catch {
       setRules([]);
     } finally {
@@ -74,8 +78,11 @@ export default function WatchRules() {
 
   async function handleCheck(rule) {
     setChecking(c => ({ ...c, [rule.id]: true }));
-    await fetch(`/api/watch-rules/${rule.id}/check`, { method: 'POST' });
+    const res = await fetch(`/api/watch-rules/${rule.id}/check`, { method: 'POST' });
+    const data = await res.json();
     setChecking(c => ({ ...c, [rule.id]: false }));
+    setCheckResults(r => ({ ...r, [rule.id]: data }));
+    setTimeout(() => setCheckResults(r => { const n = { ...r }; delete n[rule.id]; return n; }), 8000);
     fetchAll();
   }
 
@@ -124,11 +131,13 @@ export default function WatchRules() {
 
           <div className="form-group">
             <label>Activity Type (optional)</label>
-            <input
-              placeholder="e.g. soccer, volleyball, art"
+            <select
               value={form.activity_type}
               onChange={e => setForm({ ...form, activity_type: e.target.value })}
-            />
+            >
+              <option value="">Any type</option>
+              {types.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
 
           <div className="form-group">
@@ -215,6 +224,18 @@ export default function WatchRules() {
                 </button>
               </div>
             </div>
+
+            {checkResults[rule.id] && (
+              <div style={{ marginTop: 10, fontSize: 13 }}>
+                {checkResults[rule.id].notified === 0
+                  ? <span style={{ color: 'var(--color-text-muted)' }}>No new matches</span>
+                  : <span style={{ color: '#166534' }}>
+                      {checkResults[rule.id].notified} new match{checkResults[rule.id].notified > 1 ? 'es' : ''} found —{' '}
+                      <a href="/notifications">View alerts →</a>
+                    </span>
+                }
+              </div>
+            )}
           </div>
         ))}
       </div>

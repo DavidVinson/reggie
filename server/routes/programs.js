@@ -3,6 +3,13 @@ const db = require('../db');
 
 const router = Router();
 
+router.get('/types', (req, res) => {
+  const types = db.prepare(
+    'SELECT DISTINCT type FROM programs WHERE type IS NOT NULL ORDER BY type'
+  ).all().map(r => r.type);
+  res.json(types);
+});
+
 router.get('/', (req, res) => {
   let sql = 'SELECT * FROM programs WHERE 1=1';
   const params = [];

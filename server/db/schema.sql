@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS programs (
   location TEXT,
   cost TEXT,
   registration_status TEXT,
+  registration_deadline TEXT,
   spots_available INTEGER,
   source_url TEXT,
   raw_content TEXT,

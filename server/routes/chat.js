@@ -63,7 +63,8 @@ function runTool(name, input) {
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const rows = db.prepare(`
       SELECT p.id, p.name, p.type, p.age_group, p.registration_status,
-             p.start_date, p.end_date, p.day_of_week, p.start_time, p.end_time,
+             p.registration_deadline, p.start_date, p.end_date,
+             p.day_of_week, p.start_time, p.end_time,
              p.location, p.cost, p.spots_available, p.source_url,
              s.name AS site_name
       FROM programs p

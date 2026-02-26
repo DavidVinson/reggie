@@ -2,6 +2,7 @@ const db = require('../db');
 
 function auth(req, res, next) {
   if (process.env.NODE_ENV !== 'production') return next();
+  if (!req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/api/setup')) return next();
   if (req.path === '/api/auth/login') return next();
 

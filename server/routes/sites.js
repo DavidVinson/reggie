@@ -75,7 +75,7 @@ router.post('/search', async (req, res) => {
 
     res.json({ results: Array.from(byHost.values()) });
   } catch (err) {
-    console.error('Site search error:', err);
+    console.error('Reggie: site search failed:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

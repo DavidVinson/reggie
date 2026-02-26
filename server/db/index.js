@@ -17,5 +17,23 @@ db.exec(schema);
 try { db.prepare('ALTER TABLE watch_rules ADD COLUMN last_checked_at TEXT').run(); } catch {}
 try { db.prepare('ALTER TABLE programs ADD COLUMN registration_deadline TEXT').run(); } catch {}
 try { db.prepare('ALTER TABLE sites ADD COLUMN last_scraped_at TEXT').run(); } catch {}
+try {
+  db.prepare(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    password_hash TEXT NOT NULL,
+    phone_number TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+} catch {}
+try {
+  db.prepare(`CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+} catch {}
 
 module.exports = db;

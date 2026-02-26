@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import api from '../api';
+import api, { logout } from '../api';
 import './Layout.css';
 
 const navItems = [
@@ -56,6 +56,14 @@ export default function Layout() {
             <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}
+        <button
+          onClick={logout}
+          className="nav-item"
+          style={{ background: 'none', border: 'none', minHeight: 'unset', minWidth: 'unset', padding: 0 }}
+        >
+          <span className="nav-icon">⎋</span>
+          <span className="nav-label">Sign out</span>
+        </button>
       </nav>
     </div>
   );

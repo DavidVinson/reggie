@@ -1,21 +1,26 @@
 const twilio = require('twilio');
-
-const {
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
-  TWILIO_PHONE_NUMBER,
-  USER_PHONE_NUMBER,
-} = process.env;
+const db = require('./db');
 
 function isConfigured() {
-  return !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER && USER_PHONE_NUMBER);
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER } = process.env;
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) return false;
+  const user = db.prepare('SELECT phone_number FROM users LIMIT 1').get();
+  return !!(user?.phone_number);
 }
 
 // Send an SMS. Returns { success, messageId, error }.
 async function sendSms(title, body, sourceUrl) {
-  if (!isConfigured()) {
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER } = process.env;
+
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
     console.log('Reggie: Twilio not configured — skipping SMS');
     return { success: false, error: 'Twilio not configured' };
+  }
+
+  const user = db.prepare('SELECT phone_number FROM users LIMIT 1').get();
+  if (!user?.phone_number) {
+    console.log('Reggie: no user phone number — skipping SMS');
+    return { success: false, error: 'No phone number on file' };
   }
 
   const parts = [`Reggie: ${title}`];
@@ -33,7 +38,7 @@ async function sendSms(title, body, sourceUrl) {
     const message = await client.messages.create({
       body: text,
       from: TWILIO_PHONE_NUMBER,
-      to: USER_PHONE_NUMBER,
+      to: user.phone_number,
     });
     return { success: true, messageId: message.sid };
   } catch (err) {

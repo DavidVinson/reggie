@@ -4,6 +4,15 @@ export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
+export async function logout() {
+  await fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+  }).catch(() => {});
+  clearToken();
+  window.location.href = '/login';
+}
+
 // Drop-in replacement for fetch() that attaches the JWT and handles 401.
 export default async function api(url, options = {}) {
   const token = getToken();

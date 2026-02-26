@@ -11,7 +11,8 @@ app.use(cors());
 app.use(express.json());
 app.use(auth);
 
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/setup', require('./routes/setup'));
+app.use('/api/auth', require('./routes/auth').router);
 app.use('/api/sites', require('./routes/sites'));
 app.use('/api/programs', require('./routes/programs'));
 app.use('/api/watch-rules', require('./routes/watchRules'));

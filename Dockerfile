@@ -14,8 +14,9 @@ WORKDIR /app
 COPY server/package*.json ./server/
 RUN cd server && npm ci --omit=dev
 
-# Copy server source and built client
+# Copy server source, agent prompts, and built client
 COPY server/ ./server/
+COPY agents/ ./agents/
 COPY --from=client-build /app/client/dist ./client/dist
 
 # Data directory for SQLite volume

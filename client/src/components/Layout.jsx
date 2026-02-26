@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import api from '../api';
 import './Layout.css';
 
 const navItems = [
@@ -17,7 +18,7 @@ export default function Layout() {
   useEffect(() => {
     async function fetchUnread() {
       try {
-        const res = await fetch('/api/notifications');
+        const res = await api('/api/notifications');
         const data = await res.json();
         setUnread(data.filter(n => !n.read).length);
       } catch {

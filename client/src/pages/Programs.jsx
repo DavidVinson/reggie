@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import api from '../api';
 
 export default function Programs() {
   const [programs, setPrograms] = useState([]);
   const [sites, setSites] = useState([]);
   const [siteFilter, setSiteFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/programs').then(r => r.json()),
-      fetch('/api/sites').then(r => r.json()),
+      api('/api/programs').then(r => r.json()),
+      api('/api/sites').then(r => r.json()),
     ])
       .then(([progs, sites]) => {
         setPrograms(progs);
@@ -19,9 +21,17 @@ export default function Programs() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = siteFilter
-    ? programs.filter(p => String(p.site_id) === siteFilter)
-    : programs;
+  const q = search.trim().toLowerCase();
+  const filtered = programs.filter(p => {
+    if (siteFilter && String(p.site_id) !== siteFilter) return false;
+    if (!q) return true;
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.type?.toLowerCase().includes(q) ||
+      p.location?.toLowerCase().includes(q) ||
+      p.age_group?.toLowerCase().includes(q)
+    );
+  });
 
   const siteMap = Object.fromEntries(sites.map(s => [s.id, s.name]));
 
@@ -32,27 +42,36 @@ export default function Programs() {
         Browse discovered programs
       </p>
 
-      {sites.length > 1 && (
-        <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input
+          type="search"
+          placeholder="Search programs…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 160 }}
+        />
+        {sites.length > 1 && (
           <select
             value={siteFilter}
             onChange={e => setSiteFilter(e.target.value)}
-            style={{ maxWidth: 240 }}
+            style={{ flex: '0 0 auto' }}
           >
             <option value="">All sites</option>
             {sites.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
-        </div>
-      )}
+        )}
+      </div>
 
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {loading && <p style={{ color: 'var(--color-text-muted)' }}>Loading...</p>}
 
         {!loading && filtered.length === 0 && (
           <p style={{ color: 'var(--color-text-muted)' }}>
-            No programs discovered yet. Ask Claude to discover a site.
+            {programs.length === 0
+              ? 'No programs discovered yet. Go to Sites and click Discover.'
+              : 'No programs match your search.'}
           </p>
         )}
 

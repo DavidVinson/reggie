@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import api from '../api';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -18,7 +19,7 @@ export default function Notifications() {
 
   async function fetchNotifications() {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await api('/api/notifications');
       setNotifications(await res.json());
     } catch {
       setNotifications([]);
@@ -30,13 +31,13 @@ export default function Notifications() {
   useEffect(() => { fetchNotifications(); }, []);
 
   async function markRead(id) {
-    await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+    await api(`/api/notifications/${id}/read`, { method: 'PATCH' });
     setNotifications(n => n.map(notif => notif.id === id ? { ...notif, read: 1 } : notif));
   }
 
   async function markAllRead() {
     const unread = notifications.filter(n => !n.read);
-    await Promise.all(unread.map(n => fetch(`/api/notifications/${n.id}/read`, { method: 'PATCH' })));
+    await Promise.all(unread.map(n => api(`/api/notifications/${n.id}/read`, { method: 'PATCH' })));
     setNotifications(n => n.map(notif => ({ ...notif, read: 1 })));
   }
 

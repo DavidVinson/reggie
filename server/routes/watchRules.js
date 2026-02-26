@@ -52,10 +52,10 @@ router.patch('/:id', (req, res) => {
   res.json(rule);
 });
 
-router.post('/:id/check', (req, res) => {
+router.post('/:id/check', async (req, res) => {
   const rule = db.prepare('SELECT * FROM watch_rules WHERE id = ?').get(req.params.id);
   if (!rule) return res.status(404).json({ error: 'Watch rule not found' });
-  const result = checkRule(Number(req.params.id));
+  const result = await checkRule(Number(req.params.id));
   res.json(result);
 });
 

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS sites (
   url TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL CHECK(type IN ('direct', 'portal')),
   scrape_interval INTEGER NOT NULL DEFAULT 3600,
+  last_scraped_at TEXT,
   structure_profile TEXT,
   portal_url TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

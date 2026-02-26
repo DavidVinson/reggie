@@ -1,8 +1,9 @@
 const db = require('./db');
+const { sendSms } = require('./notifier');
 
 // Find programs matching a watch rule that are open/waitlist and not yet notified,
 // create notifications for each, and update last_checked_at.
-function checkRule(ruleId) {
+async function checkRule(ruleId) {
   const rule = db.prepare('SELECT * FROM watch_rules WHERE id = ?').get(ruleId);
   if (!rule || !rule.active) return { notified: 0 };
 
@@ -28,6 +29,10 @@ function checkRule(ruleId) {
     VALUES ('opening', ?, ?, ?, ?)
   `);
 
+  const updateSmsSent = db.prepare(`
+    UPDATE notifications SET sms_sent = 1, sms_message_id = ? WHERE id = ?
+  `);
+
   for (const program of matches) {
     const statusLabel = program.registration_status === 'waitlist' ? 'waitlist open' : 'open for registration';
     const bodyParts = [
@@ -36,12 +41,16 @@ function checkRule(ruleId) {
       program.spots_available != null ? `${program.spots_available} spot${program.spots_available === 1 ? '' : 's'} available` : null,
     ].filter(Boolean);
 
-    insertNotification.run(
-      `${program.name} is ${statusLabel}`,
-      bodyParts.length ? bodyParts.join(' · ') : null,
-      program.id,
-      ruleId
-    );
+    const title = `${program.name} is ${statusLabel}`;
+    const body = bodyParts.length ? bodyParts.join(' · ') : null;
+
+    const { lastInsertRowid } = insertNotification.run(title, body, program.id, ruleId);
+
+    // Send SMS and update the notification row with delivery status
+    const sms = await sendSms(title, body, program.source_url);
+    if (sms.success) {
+      updateSmsSent.run(sms.messageId, lastInsertRowid);
+    }
   }
 
   db.prepare(`
@@ -51,11 +60,11 @@ function checkRule(ruleId) {
   return { notified: matches.length };
 }
 
-function checkAllRules() {
+async function checkAllRules() {
   const rules = db.prepare('SELECT id FROM watch_rules WHERE active = 1').all();
   for (const rule of rules) {
     try {
-      checkRule(rule.id);
+      await checkRule(rule.id);
     } catch (err) {
       console.error(`Reggie: watch rule ${rule.id} check failed:`, err.message);
     }

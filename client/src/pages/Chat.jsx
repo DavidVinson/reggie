@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Markdown from 'react-markdown';
+import api from '../api';
+import { useToast } from '../components/Toast';
 
 const mdComponents = {
   p:      ({ children }) => <p style={{ margin: '0 0 8px' }}>{children}</p>,
@@ -10,6 +12,7 @@ const mdComponents = {
 };
 
 export default function Chat() {
+  const toast = useToast();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,7 +33,7 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await api('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
@@ -39,8 +42,8 @@ export default function Chat() {
       if (data.message) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
       }
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]);
+    } catch (err) {
+      toast(err.message || 'Could not reach server');
     } finally {
       setLoading(false);
     }

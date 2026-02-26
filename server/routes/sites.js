@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { FirecrawlAppV1: FirecrawlApp } = require('@mendable/firecrawl-js');
 const db = require('../db');
+const { checkAllRules } = require('../watcher');
 
 const router = Router();
 
@@ -174,7 +175,12 @@ router.post('/:id/discover', async (req, res) => {
 
     bulkInsert(programs);
 
+    db.prepare("UPDATE sites SET last_scraped_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(site.id);
+
     res.json({ programs: programs.length, raw_scrapes: rawScrapes.length, parse_skipped: parseSkipped || false });
+
+    // Check watch rules immediately against newly discovered programs (fire-and-forget)
+    checkAllRules().catch(err => console.error('Post-discover rule check failed:', err.message));
   } catch (err) {
     console.error('Discovery error:', err);
     res.status(500).json({ error: err.message });

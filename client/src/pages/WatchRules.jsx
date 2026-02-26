@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import api from '../api';
+import { useToast } from '../components/Toast';
 
 const AGE_GROUPS = ['youth', 'adult', 'senior', 'all ages'];
 
@@ -15,6 +17,7 @@ function timeAgo(dateStr) {
 }
 
 export default function WatchRules() {
+  const toast = useToast();
   const [rules, setRules] = useState([]);
   const [sites, setSites] = useState([]);
   const [programs, setPrograms] = useState([]);
@@ -28,10 +31,10 @@ export default function WatchRules() {
   async function fetchAll() {
     try {
       const [rulesRes, sitesRes, programsRes, typesRes] = await Promise.all([
-        fetch('/api/watch-rules'),
-        fetch('/api/sites'),
-        fetch('/api/programs'),
-        fetch('/api/programs/types'),
+        api('/api/watch-rules'),
+        api('/api/sites'),
+        api('/api/programs'),
+        api('/api/programs/types'),
       ]);
       setRules(await rulesRes.json());
       setSites(await sitesRes.json());
@@ -52,7 +55,7 @@ export default function WatchRules() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    await fetch('/api/watch-rules', {
+    await api('/api/watch-rules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -68,7 +71,7 @@ export default function WatchRules() {
   }
 
   async function handleToggle(rule) {
-    await fetch(`/api/watch-rules/${rule.id}`, {
+    await api(`/api/watch-rules/${rule.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !rule.active }),
@@ -78,17 +81,23 @@ export default function WatchRules() {
 
   async function handleCheck(rule) {
     setChecking(c => ({ ...c, [rule.id]: true }));
-    const res = await fetch(`/api/watch-rules/${rule.id}/check`, { method: 'POST' });
-    const data = await res.json();
-    setChecking(c => ({ ...c, [rule.id]: false }));
-    setCheckResults(r => ({ ...r, [rule.id]: data }));
-    setTimeout(() => setCheckResults(r => { const n = { ...r }; delete n[rule.id]; return n; }), 8000);
-    fetchAll();
+    try {
+      const res = await api(`/api/watch-rules/${rule.id}/check`, { method: 'POST' });
+      const data = await res.json();
+      setCheckResults(r => ({ ...r, [rule.id]: data }));
+      setTimeout(() => setCheckResults(r => { const n = { ...r }; delete n[rule.id]; return n; }), 8000);
+      fetchAll();
+    } catch {
+      toast('Check failed — server unreachable');
+    } finally {
+      setChecking(c => ({ ...c, [rule.id]: false }));
+    }
   }
 
   async function handleDelete(id) {
     if (!window.confirm('Delete this watch rule?')) return;
-    await fetch(`/api/watch-rules/${id}`, { method: 'DELETE' });
+    const res = await api(`/api/watch-rules/${id}`, { method: 'DELETE' });
+    if (!res.ok) { toast('Failed to delete rule'); return; }
     fetchAll();
   }
 

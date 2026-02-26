@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import api from '../api';
+import { useToast } from '../components/Toast';
 
 const API = '/api/sites';
 
@@ -10,6 +12,7 @@ const INTERVALS = [
 ];
 
 export default function Sites() {
+  const toast = useToast();
   const [sites, setSites] = useState([]);
   const [programCounts, setProgramCounts] = useState({});
   const [showForm, setShowForm] = useState(false);
@@ -29,10 +32,10 @@ export default function Sites() {
 
   async function fetchSites() {
     try {
-      const res = await fetch(API);
+      const res = await api(API);
       const data = await res.json();
       setSites(data);
-      const progRes = await fetch('/api/programs');
+      const progRes = await api('/api/programs');
       const programs = await progRes.json();
       const counts = {};
       for (const p of programs) {
@@ -50,11 +53,16 @@ export default function Sites() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    await fetch(API, {
+    const res = await api(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast(data.error || 'Failed to add site');
+      return;
+    }
     setForm({ name: '', url: '', scrape_interval: 60 });
     setShowForm(false);
     fetchSites();
@@ -64,7 +72,7 @@ export default function Sites() {
     setDiscovering(d => ({ ...d, [site.id]: true }));
     setDiscoverResult(r => ({ ...r, [site.id]: null }));
     try {
-      const res = await fetch(`${API}/${site.id}/discover`, { method: 'POST' });
+      const res = await api(`${API}/${site.id}/discover`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Discovery failed');
       setDiscoverResult(r => ({ ...r, [site.id]: { ok: true, programs: data.programs, parseSkipped: data.parse_skipped } }));
@@ -78,7 +86,8 @@ export default function Sites() {
 
   async function handleDelete(id) {
     if (!window.confirm('Delete this site?')) return;
-    await fetch(`${API}/${id}`, { method: 'DELETE' });
+    const res = await api(`${API}/${id}`, { method: 'DELETE' });
+    if (!res.ok) { toast('Failed to delete site'); return; }
     fetchSites();
   }
 
@@ -89,7 +98,7 @@ export default function Sites() {
     setSearchError('');
     setSelectedUrls(new Set());
     try {
-      const res = await fetch(`${API}/search`, {
+      const res = await api(`${API}/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ city: city.trim(), state: state.trim() }),
@@ -99,6 +108,7 @@ export default function Sites() {
       setSearchResults(data.results || []);
     } catch (err) {
       setSearchError(err.message);
+      toast(err.message || 'Search failed');
     } finally {
       setSearching(false);
     }
@@ -124,7 +134,7 @@ export default function Sites() {
     try {
       await Promise.all(
         toAdd.map(r =>
-          fetch(API, {
+          api(API, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: r.name, url: r.url, type: r.type, scrape_interval: 60 }),
